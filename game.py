@@ -113,6 +113,7 @@ class PokerGame:
         self.current_stage = 'Initialization'  # Current stage of the game
         self.current_player = None  # Current player whose turn it is
         self.winner: Player = None  # Winner of the game
+        self.loser: Player = None  # Loser of the game
         self.chat_id: str = None  # Chat ID of the game
 
     def add_player(self, player: Player):
@@ -131,9 +132,6 @@ class PokerGame:
 
     def handle_reset(self):
         # resets game state
-        # todo: should return back tokens
-
-
         for player in self.players:
             # todo: reset to starting state
             pass
@@ -200,7 +198,7 @@ class PokerGame:
         elif self.current_round == 'Flop':
             print('Flop')
             self.community_cards.extend(self.deck.deal(2))
-            self.winner = self.end_game()
+            self.winner, self.loser = self.end_game()
             self.current_round = 'End'
         #     # self.current_round = 'Turn & River'
         # elif self.current_round == 'Turn & River':
@@ -279,25 +277,23 @@ class PokerGame:
             # award the pot to the player
             player = [p for p in self.players if not p.has_folded][0]
             player.chips += self.pot
-            # todo: send pot tokens to winner and send current chips of loser to loser
             self.pot = 0
             self.last_action = 'End'
-            return player
+            return player, [p for p in self.players if p.has_folded][0]
         else:
-        # handle showdown, print both player cards and announce the winner
             winner = self.evaluate_winner()
             if winner:
                 winner.chips += self.pot
                 self.pot = 0
                 self.last_action = 'End'
-                return winner
+                return winner, self.players[1] if winner == self.players[0] else self.players[0]
             else:
                 # split the pot
                 for player in self.players:
                     player.chips += self.pot / len(self.players)
                 self.pot = 0
                 self.last_action = 'End'
-                return None
+                return None, None
 
 
 

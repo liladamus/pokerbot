@@ -98,6 +98,10 @@ class PokerBot:
         user_id = str(update.message.from_user.id)
         if user_id in self.authorized_ids:
             self.game.handle_reset()
+            # todo @boolet : each player should get their chips back
+            # gamecontract.encodeABI(
+            #     fn_name='endGame',
+            #     args=[self.game.chat_id, get_wallet_for_tg_id(player.telegram_id), usedWETH_value_from_chips(self.game.starting_chips)])
             self.game = PokerGame()
             update.message.reply_text('Game has been reset.')
         else:
@@ -135,6 +139,10 @@ class PokerBot:
         user = update.message.from_user
         self.game.starting_chips = chips = int(context.args[0]) if context.args else 1000
         # Create a new Player object and add it to the game
+        # todo @boolet : check if user has enough pvp and reserve pvp tokens equal to amount of chips here
+        # gamecontract.encodeABI(
+        #     fn_name='newGame',
+        #     args=[self.game.chat_id, chips, [get_address_for(player.telegram_id)], bets_wei, useWETH])
         player = Player(user.id, user.username, chips)
         self.game.add_player(player)
         # Store the chat_id of the game
@@ -153,12 +161,19 @@ class PokerBot:
         if self.game and self.game.current_round:
             self.send_message("Another game is running. Please wait for it to finish.")
             return
+        if self.game and len(self.game.players) == 2:
+            self.send_message("Another game is running. Please wait for it to finish.")
+            return
         user = update.message.from_user
         # Check if the user has already joined the game
         if any(player for player in self.game.players if player.telegram_id == user.id):
             update.message.reply_text(f'{user.first_name}, you have already joined the game!')
         else:
             # Create a new Player object and add it to the game
+            # todo @boolet : check if user has enough pvp and reserve pvp tokens equal to amount of chips here
+            # gamecontract.encodeABI(
+            #     fn_name='newGame',
+            #     args=[self.game.chat_id, chips, [get_address_for(player.telegram_id)], bets_wei, useWETH])
             player = Player(user.id, user.username, self.game.starting_chips)
             self.game.add_player(player)
             update.message.reply_text(f'{user.first_name} has joined the game! Setting up the table...')
@@ -356,8 +371,22 @@ class PokerBot:
                         f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
                     if self.game.winner:
                         self.send_message(f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hole_cards}\n Hand was: {PokerHand(HandEvaluator.evaluate_hand(self.game.winner.hole_cards + self.game.community_cards)[0]).name}")
+                        # todo @boolet: send pot tokens to winner and send current chips of loser to loser
+                        # gamecontract.encodeABI(
+                        #     fn_name='endGame',
+                        #     args=[self.game.chat_id, get_wallet_for_tg_id(self.game.winner.telegram_id), usedWETH_value_from_chips(self.game.winner.chips)])
+                        # gamecontract.encodeABI(
+                        #     fn_name='endGame',
+                        #     args=[self.game.chat_id, get_wallet_for_tg_id(self.game.loser.telegram_id), usedWETH_value_from_chips(self.game.loser.chips)])
+
                     else:
                         self.send_message(f" The game has ended. There is no winner. \n hands: {self.game.players[0].hole_cards} vs. {self.game.players[1].hole_cards}")
+                        # todo @boolet: each player gets half their starting bet chips back
+                        for player in self.game.players:
+                            # gamecontract.encodeABI(
+                            #     fn_name='endGame',
+                            #     args=[self.game.chat_id, get_wallet_for_tg_id(player.telegram_id), usedWETH_value_from_chips(self.game.starting_chips)])
+                            pass
                     self.game = PokerGame()
                     return
                 else:
