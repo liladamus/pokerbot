@@ -21,7 +21,7 @@ class PokerHand(Enum):
 
 class Card:
     RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-    SUITS = ['♠️', '♠️', '♦️', '♦️']
+    SUITS = ['♠️', '♣️', '♦️', '♥️']
 
     def __init__(self, rank: str, suit: str):
         self.rank = rank
