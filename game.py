@@ -198,20 +198,23 @@ class PokerGame:
             self.community_cards.extend(self.deck.deal(3))
             self.current_round = 'Flop'
         elif self.current_round == 'Flop':
+            print('Flop')
             self.community_cards.extend(self.deck.deal(2))
             self.winner = self.end_game()
             self.current_round = 'End'
-            # self.current_round = 'Turn & River'
-        elif self.current_round == 'Turn & River':
-            self.community_cards.extend(self.deck.deal(2))
-            self.winner = self.end_game()
-            self.current_round = 'End'
+        #     # self.current_round = 'Turn & River'
+        # elif self.current_round == 'Turn & River':
+        #     print('Turn & River')
+        #     self.community_cards.extend(self.deck.deal(2))
+        #     self.winner = self.end_game()
+        #     self.current_round = 'End'
         elif self.current_round == 'Turn':
             self.community_cards.extend(self.deck.deal(1))
             self.current_round = 'River'
         else:
-            self.winner = self.end_game()
-            self.current_round = 'End'
+            # print('Else end game')
+            # self.winner = self.end_game()
+            # self.current_round = 'End'
             pass
 
 
@@ -276,6 +279,7 @@ class PokerGame:
             # award the pot to the player
             player = [p for p in self.players if not p.has_folded][0]
             player.chips += self.pot
+            # todo: send pot tokens to winner and send current chips of loser to loser
             self.pot = 0
             self.last_action = 'End'
             return player

@@ -4,7 +4,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 # Import auxiliary files (assuming they exist)
 # import game_logic
 # import api_calls
-from game import PokerGame, Player
+from game import PokerGame, Player, HandEvaluator, PokerHand
 
 # Initialize the bot
 TOKEN = '6439633643:AAHoE8tfyjt9gOfJJacWn4nKMxzSZ570RYs'
@@ -228,7 +228,7 @@ class PokerBot:
         update.message.reply_text(f'{user.first_name} calls.')
         GameState.save_state(self.game)
         self.next_round()
-        self.inform_players()
+        # self.inform_players()
         # except Exception as e:
         #     self.send_message(f"An error occurred: {str(e)}")
 
@@ -278,27 +278,25 @@ class PokerBot:
             update.message.reply_text(f'{user.first_name} folds.')
             GameState.save_state(self.game)
             self.next_round()
-            self.inform_players()
+            # self.inform_players()
         except Exception as e:
             self.send_message(f"An error occurred: {str(e)}")
 
     def check(self, update: Update, context: CallbackContext):
-        try:
-            user = update.message.from_user
-            if not self.game or self.game.current_player.name != user.username:
-                update.message.reply_text('It\'s not your turn.')
-                return
+        user = update.message.from_user
+        if not self.game or self.game.current_player.name != user.username:
+            update.message.reply_text('It\'s not your turn.')
+            return
 
-            # Implement check logic
-            self.game.handle_check(self.game.current_player)
-            self.game.current_player.has_called = True
-            update.message.reply_text(f'{user.first_name} checks.')
-            GameState.save_state(self.game)
-            self.game.current_player = self.game.players[
-                (self.game.players.index(self.game.current_player) + 1) % len(self.game.players)]
-            self.inform_starter()
-        except Exception as e:
-            self.send_message(f"An error occurred: {str(e)}")
+        # Implement check logic
+        self.game.handle_check(self.game.current_player)
+        self.game.current_player.has_called = True
+        update.message.reply_text(f'{user.first_name} checks.')
+        GameState.save_state(self.game)
+        self.game.current_player = self.game.players[
+            (self.game.players.index(self.game.current_player) + 1) % len(self.game.players)]
+        self.inform_starter()
+
 
     def place_bet(self, update: Update, context: CallbackContext):
         try:
@@ -354,9 +352,9 @@ class PokerBot:
                     self.send_message(
                         f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
                     if self.game.winner:
-                        self.send_message(f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hole_cards}")
+                        self.send_message(f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hole_cards}\n Hand was: {PokerHand(HandEvaluator.evaluate_hand(self.game.winner.hole_cards + self.game.community_cards)[0]).name}")
                     else:
-                        self.send_message(f" The game has ended. There is no winner.")
+                        self.send_message(f" The game has ended. There is no winner. \n hands: {self.game.players[0].hole_cards} vs. {self.game.players[1].hole_cards}")
                     self.game = PokerGame()
                     return
                 else:
