@@ -21,7 +21,7 @@ class PokerHand(Enum):
 
 class Card:
     RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-    SUITS = ['♠', '♣', '♦', '♥']
+    SUITS = ['♠️', '♠️', '♦️', '♦️']
 
     def __init__(self, rank: str, suit: str):
         self.rank = rank
@@ -29,6 +29,7 @@ class Card:
 
     def __repr__(self):
         return f'{self.rank}{self.suit}'
+
 
     def to_dict(self):
         return {
@@ -129,8 +130,10 @@ class PokerGame:
         self.current_round = 'Pre-flop'
 
     def handle_reset(self):
-        # return all players to their starting state in terms of chips and current bet
-        # ends the game
+        # resets game state
+        # todo: should return back tokens
+
+
         for player in self.players:
             # todo: reset to starting state
             pass
@@ -225,17 +228,17 @@ class PokerGame:
             # If hand ranks are the same, compare key cards
             for card1, card2 in zip(player1_key_cards, player2_key_cards):
                 if Card.RANKS.index(card1) > Card.RANKS.index(card2):
-                    return 'Player 1'
+                    return self.players[0]
                 elif Card.RANKS.index(card1) < Card.RANKS.index(card2):
-                    return 'Player 2'
+                    return self.players[1]
 
             # If key cards are the same, compare remaining cards
-            remaining_cards1 = sorted(self.players[0].hole_cards + self.community_cards, key=lambda x: Card.RANKS.index(x[0]), reverse=True)
-            remaining_cards2 = sorted(self.players[1].hole_cards + self.community_cards, key=lambda x: Card.RANKS.index(x[0]), reverse=True)
+            remaining_cards1 = sorted(self.players[0].hole_cards + self.community_cards, key=lambda x: Card.RANKS.index(x.rank), reverse=True)
+            remaining_cards2 = sorted(self.players[1].hole_cards + self.community_cards, key=lambda x: Card.RANKS.index(x.rank), reverse=True)
             for card1, card2 in zip(remaining_cards1, remaining_cards2):
-                if Card.RANKS.index(card1[0]) > Card.RANKS.index(card2[0]):
+                if Card.RANKS.index(card1.rank) > Card.RANKS.index(card2.rank):
                     return self.players[0]
-                elif Card.RANKS.index(card1[0]) < Card.RANKS.index(card2[0]):
+                elif Card.RANKS.index(card1.rank) < Card.RANKS.index(card2.rank):
                     return self.players[1]
 
             # If all cards are the same, it's a tie

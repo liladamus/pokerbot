@@ -98,6 +98,7 @@ class PokerBot:
         user_id = str(update.message.from_user.id)
         if user_id in self.authorized_ids:
             self.game.handle_reset()
+            self.game = PokerGame()
             update.message.reply_text('Game has been reset.')
         else:
             update.message.reply_text('You are not authorized to use this command.')
@@ -121,9 +122,13 @@ class PokerBot:
 
     def inform_players(self):
         self.send_message(
-            f"It is {self.game.current_player.name}'s turn. You have {self.game.current_player.chips} chips. The current bet is {self.game.current_bet} chips. The current pot is {self.game.pot} chips. use /call, /raise, /fold, /check, /bet to play your turn.")
+            f"It is {self.game.current_player.name}'s turn. You have {self.game.current_player.chips} chips. The current bet is {self.game.current_bet} chips. The current pot is {self.game.pot} chips. use /call, /fold to play your turn.")
 
     def start_poker(self, update: Update, context: CallbackContext):
+        # if another game is runnnig dont start a new one
+        if self.game and self.game.current_round:
+            self.send_message("Another game is running. Please wait for it to finish.")
+            return
         user = update.message.from_user
         self.game.starting_chips = chips = int(context.args[0]) if context.args else 1000
         # Create a new Player object and add it to the game
@@ -141,6 +146,10 @@ class PokerBot:
         GameState.save_state(self.game)
 
     def join_poker(self, update: Update, context: CallbackContext):
+        # if another game is runnnig dont start a new one
+        if self.game and self.game.current_round:
+            self.send_message("Another game is running. Please wait for it to finish.")
+            return
         user = update.message.from_user
         # Check if the user has already joined the game
         if any(player for player in self.game.players if player.telegram_id == user.id):
@@ -207,20 +216,21 @@ class PokerBot:
         self.updater.idle()
 
     def call_bet(self, update: Update, context: CallbackContext):
-        try:
-            user = update.message.from_user
-            if not self.game or self.game.current_player.name != user.username:
-                update.message.reply_text('It\'s not your turn.')
-                return
+        # try:
+        user = update.message.from_user
+        if not self.game or self.game.current_player.name != user.username:
+            update.message.reply_text('It\'s not your turn.')
+            return
 
-            # Implement call logic
-            self.game.handle_call(self.game.current_player)
-            self.game.current_player.has_called = True
-            update.message.reply_text(f'{user.first_name} calls.')
-            GameState.save_state(self.game)
-            self.next_player()
-        except Exception as e:
-            self.send_message(f"An error occurred: {str(e)}")
+        # Implement call logic
+        self.game.handle_call(self.game.current_player)
+        self.game.current_player.has_called = True
+        update.message.reply_text(f'{user.first_name} calls.')
+        GameState.save_state(self.game)
+        self.next_round()
+        self.inform_players()
+        # except Exception as e:
+        #     self.send_message(f"An error occurred: {str(e)}")
 
     def raise_bet(self, update: Update, context: CallbackContext):
         # try:
@@ -249,7 +259,8 @@ class PokerBot:
         self.game.current_player.has_called = True
         update.message.reply_text(f'{user.first_name} raises by {amount} PVP tokens.')
         GameState.save_state(self.game)
-        self.next_player()
+        self.next_round()
+        self.inform_players()
 
         # except Exception as e:
         #     self.send_message(f"An error occurred: {str(e)}")
@@ -266,7 +277,8 @@ class PokerBot:
             self.game.current_player.has_folded = True
             update.message.reply_text(f'{user.first_name} folds.')
             GameState.save_state(self.game)
-            self.next_player()
+            self.next_round()
+            self.inform_players()
         except Exception as e:
             self.send_message(f"An error occurred: {str(e)}")
 
@@ -304,7 +316,8 @@ class PokerBot:
             self.game.current_player.has_called = True
             update.message.reply_text(f'{user.first_name} bets {amount} PVP tokens.')
             GameState.save_state(self.game)
-            self.next_player()
+            self.next_round()
+            self.inform_players()
 
         except Exception as e:
             self.send_message(f"An error occurred: {str(e)}")
@@ -334,7 +347,16 @@ class PokerBot:
                 self.game.next_round()
                 # send the new cards to the players
                 if self.game.current_round == 'Turn & River':
-                    self.send_message(f" The game has ended. The winner is {self.game.winner.name}")
+                    self.send_message(f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hand}")
+                    self.game = PokerGame()
+                    return
+                if self.game.current_round == 'End':
+                    self.send_message(
+                        f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
+                    if self.game.winner:
+                        self.send_message(f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hole_cards}")
+                    else:
+                        self.send_message(f" The game has ended. There is no winner.")
                     self.game = PokerGame()
                     return
                 else:
@@ -369,7 +391,10 @@ class PokerBot:
                 if self.game.current_round == 'End':
                     self.send_message(
                         f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
-                    self.send_message(f" The game has ended. The winner is {self.game.winner.name}")
+                    if self.game.winner:
+                        self.send_message(f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hole_cards}")
+                    else:
+                        self.send_message(f" The game has ended. There is no winner.")
                     self.game = PokerGame()
                     return
                 else:
