@@ -170,6 +170,9 @@ class PokerBot:
         if self.game and len(self.game.players) == 2:
             update.message.reply_text("Another game is running. Please wait for it to finish.")
             return
+        if self.game and self.game.small_blind == 0:
+            update.message.reply_text("Game needs to reset.")
+            return
         user = update.message.from_user
         # Check if the user has already joined the game
         if any(player for player in self.game.players if player.telegram_id == user.id):
