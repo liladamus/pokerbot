@@ -155,7 +155,7 @@ class PokerGame:
             raise ValueError('Not enough chips to bet.')
         player.bet(amount)
         self.pot += amount
-        self.current_bet = amount
+        self.current_bet += amount
         self.last_action = 'Bet'
 
     def handle_raise(self, player: Player, amount: int):
@@ -163,7 +163,7 @@ class PokerGame:
             raise ValueError('Invalid raise amount.')
         player.bet(amount)
         self.pot += amount
-        self.current_bet = amount
+        self.current_bet += amount
         self.last_action = 'Raise'
 
     def handle_call(self, player: Player):
