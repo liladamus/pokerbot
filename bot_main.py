@@ -370,7 +370,15 @@ class PokerBot:
                     self.send_message(
                         f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
                     if self.game.winner:
-                        self.send_message(f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hole_cards}\n Hand was: {PokerHand(HandEvaluator.evaluate_hand(self.game.winner.hole_cards + self.game.community_cards)[0]).name}")
+                        message = (
+                            f"The game has ended. The winner is {self.game.winner.name} "
+                            f"with {self.game.winner.hole_cards}\n Hand was: "
+                            f"{PokerHand(HandEvaluator.evaluate_hand(self.game.winner.hole_cards + self.game.community_cards)[0]).name}\n"
+                            # print amount of chips won
+                            f" and won {self.game.winner.chips} PVP tokens"
+                        )
+                        self.send_message(message)
+
                         # todo @boolet: send pot tokens to winner and send current chips of loser to loser
                         # gamecontract.encodeABI(
                         #     fn_name='endGame',
