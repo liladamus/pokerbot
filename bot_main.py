@@ -129,6 +129,9 @@ class PokerBot:
         if self.game and self.game.current_round:
             self.send_message("Another game is running. Please wait for it to finish.")
             return
+        if self.game and self.game.players:
+            self.send_message("Another game is running. Please wait for it to finish.")
+            return
         user = update.message.from_user
         self.game.starting_chips = chips = int(context.args[0]) if context.args else 1000
         # Create a new Player object and add it to the game
