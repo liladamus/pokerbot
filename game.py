@@ -98,6 +98,7 @@ import random
 class PokerGame:
     def __init__(self):
         self.players: List[Player] = []  # List of players in the game
+        self.starting_state: List[Player] = []  # List of players in the game
         self.deck = Deck()
         self.current_bet = 0  # The current bet amount that players need to match
         self.last_action = None  # 'Check', 'Bet', 'Raise', 'Call', 'Fold'
@@ -110,6 +111,8 @@ class PokerGame:
         self.current_stage = 'Initialization'  # Current stage of the game
         self.current_player = None  # Current player whose turn it is
         self.winner: Player = None  # Winner of the game
+        self.chat_id: str = None  # Chat ID of the game
+
     def add_player(self, player: Player):
         self.players.append(player)
 
@@ -123,6 +126,13 @@ class PokerGame:
         for player in self.players:
             player.hole_cards = self.deck.deal(2)
         self.current_round = 'Pre-flop'
+
+    def handle_reset(self):
+        # return all players to their starting state in terms of chips and current bet
+        # ends the game
+        for player in self.players:
+            # todo: reset to starting state
+            pass
 
     def handle_bet(self, player: Player, amount: int):
         if amount > player.chips:
@@ -160,7 +170,9 @@ class PokerGame:
         other_player.chips += self.pot
         self.pot = 0
         self.last_action = 'Fold'
-        # TODO: Handle game end logic
+
+
+    # def handle_show(self):
 
 
     def next_round(self):
