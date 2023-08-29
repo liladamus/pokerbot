@@ -1,6 +1,8 @@
 # Import necessary libraries and modules
 from telegram import Bot, Update, error
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+
+from card_generator import generate_card_image_public
 # Import auxiliary files (assuming they exist)
 # import game_logic
 # import api_calls
@@ -193,6 +195,30 @@ class PokerBot:
         """Send a message to the group chat."""
         self.updater.bot.send_message(chat_id=self.game.chat_id, text=message)
 
+    def send_public_image(self, image_addr: str):
+        """Send a private message to a user."""
+        try:
+            # Open the file in binary mode
+            with open(image_addr, 'rb') as photo:
+                # send image to user
+                self.updater.bot.send_photo(chat_id=self.game.chat_id, photo=photo)
+        except error.Unauthorized:
+            self.send_message(f"Error occured while sending image.")
+        except FileNotFoundError:
+            print(f"Image file {image_addr} not found.")
+
+    def send_private_image(self, user_id: int, username: str, image_addr: str):
+        """Send a private message to a user."""
+        try:
+            # Open the file in binary mode
+            with open(image_addr, 'rb') as photo:
+                # send image to user
+                self.updater.bot.send_photo(chat_id=user_id, photo=photo)
+        except error.Unauthorized:
+            self.send_message(f"User {username} has not initiated a chat with the bot.")
+        except FileNotFoundError:
+            print(f"Image file {image_addr} not found.")
+
     def send_private_message(self, user_id: int, username: str, message: str):
         """Send a private message to a user."""
         try:
@@ -224,6 +250,9 @@ class PokerBot:
         # Send private hole cards to each player
         for player in self.game.players:
             hole_cards = ", ".join([f"{card.rank}{card.suit}" for card in player.hole_cards])
+            image_addr = generate_card_image_public(player.hole_cards, f'{player.name}_cards.png')
+            # send image to player
+            self.send_private_image(int(player.telegram_id), player.name, image_addr)
             self.send_private_message(int(player.telegram_id), player.name, f"Your hole cards are: {hole_cards}")
         # set game'c current player to the player after the dealer
         self.game.current_player = self.game.players[0]
@@ -377,6 +406,8 @@ class PokerBot:
                 if self.game.current_round == 'End':
                     update.message.reply_text(
                         f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
+                    image_addr = generate_card_image_public(self.game.community_cards, f'comm_cards.png')
+                    self.send_public_image(image_addr)
                     if self.game.winner:
                         message = (
                             f"The game has ended. The winner is {self.game.winner.name} "
@@ -409,6 +440,8 @@ class PokerBot:
                 else:
                     update.message.reply_text(
                         f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
+                    image_addr = generate_card_image_public(self.game.community_cards, f'comm_cards.png')
+                    self.send_public_image(image_addr)
                     # reset the players' has_called and has_folded attributes
                     for player in self.game.players:
                         player.has_called = False
@@ -438,6 +471,8 @@ class PokerBot:
                 if self.game.current_round == 'End':
                     update.message.reply_text(
                         f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
+                    image_addr = generate_card_image_public(self.game.community_cards, f'comm_cards.png')
+                    self.send_public_image(image_addr)
                     if self.game.winner:
                         update.message.reply_text(
                             f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hole_cards}")
@@ -448,6 +483,8 @@ class PokerBot:
                 else:
                     update.message.reply_text(
                         f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
+                    image_addr = generate_card_image_public(self.game.community_cards, f'comm_cards.png')
+                    self.send_public_image(image_addr)
                     # reset the players' has_called and has_folded attributes
                     for player in self.game.players:
                         player.has_called = False
