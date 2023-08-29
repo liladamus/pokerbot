@@ -15,6 +15,7 @@ import json
 import os
 from dotenv import load_dotenv
 
+
 class GameState:
     FILE_PATH = 'game_state.json'
 
@@ -81,9 +82,9 @@ class PokerBot:
         dp.add_handler(CommandHandler('call', self.call_bet))
         dp.add_handler(CommandHandler('raise', self.raise_bet))
         dp.add_handler(CommandHandler('raise_2x', self.raise_bet))
-        dp.add_handler(CommandHandler('raise_3x', self.raise_bet))
-        dp.add_handler(CommandHandler('raise_5x', self.raise_bet))
-        dp.add_handler(CommandHandler('raise_10x', self.raise_bet))
+        # dp.add_handler(CommandHandler('raise_3x', self.raise_bet))
+        # dp.add_handler(CommandHandler('raise_5x', self.raise_bet))
+        # dp.add_handler(CommandHandler('raise_10x', self.raise_bet))
         dp.add_handler(CommandHandler('fold', self.fold))
         dp.add_handler(CommandHandler('check', self.check))
         dp.add_handler(CommandHandler('bet', self.place_bet))
@@ -110,25 +111,33 @@ class PokerBot:
             update.message.reply_text('Game aborted.')
             GameState.clear_state()
 
+    def inform_joiner(self):
+        self.send_message(
+            f"It is {self.game.current_player.name}'s turn. You have {self.game.current_player.chips} chips. The current bet is {self.game.current_bet} chips. The current pot is {self.game.pot} chips. use /check, /raise_2x to play your turn.")
+
+    def inform_starter(self):
+        self.send_message(
+            f"It is {self.game.current_player.name}'s turn. You have {self.game.current_player.chips} chips. The current bet is {self.game.current_bet} chips. The current pot is {self.game.pot} chips. use /call, /fold to play your turn.")
+
     def inform_players(self):
         self.send_message(
             f"It is {self.game.current_player.name}'s turn. You have {self.game.current_player.chips} chips. The current bet is {self.game.current_bet} chips. The current pot is {self.game.pot} chips. use /call, /raise, /fold, /check, /bet to play your turn.")
 
     def start_poker(self, update: Update, context: CallbackContext):
         user = update.message.from_user
-        small_blind = int(context.args[0]) if context.args else 500
+        self.game.starting_chips = chips = int(context.args[0]) if context.args else 1000
         # Create a new Player object and add it to the game
-        player = Player(user.id, user.username)
+        player = Player(user.id, user.username, chips)
         self.game.add_player(player)
         # Store the chat_id of the game
         print(update.message)
         print(update.message.chat_id)
 
         self.game.chat_id = update.message.chat_id
-        # Set the small blind for the game
-        self.game.small_blind = small_blind
+        # Set the small blind for the game as 1/10 of the total chips
+        self.game.small_blind = chips // 4
         update.message.reply_text(
-            f'{user.first_name} has initiated a 1v1 poker game with a small blind of {small_blind} PVP tokens. other can join using /joinpoker')
+            f'{user.first_name} has initiated a 1v1 poker game with total chips of {chips} and a small blind of {self.game.small_blind} PVP tokens. other can join using /joinpoker')
         GameState.save_state(self.game)
 
     def join_poker(self, update: Update, context: CallbackContext):
@@ -138,7 +147,7 @@ class PokerBot:
             update.message.reply_text(f'{user.first_name}, you have already joined the game!')
         else:
             # Create a new Player object and add it to the game
-            player = Player(user.id, user.username)
+            player = Player(user.id, user.username, self.game.starting_chips)
             self.game.add_player(player)
             update.message.reply_text(f'{user.first_name} has joined the game! Setting up the table...')
             GameState.save_state(self.game)
@@ -170,7 +179,11 @@ class PokerBot:
         other_player = [player for player in self.game.players if player != self.game.dealer][0]
         other_player_name = other_player.name
         self.send_message(
-            f"{dealer_name} is the dealer for this round. {other_player_name} posts the small blind. {dealer_name} posts the big blind.")
+            f"{dealer_name} is the dealer for this round. {other_player_name} posts the small blind of {self.game.small_blind} PVP. {dealer_name} posts the big blind of {2 * self.game.small_blind} PVP.")
+
+        # for first player set small blind and for second player set big blind
+        self.game.handle_blinds()
+
 
         self.log_game_state()
         # Send private hole cards to each player
@@ -178,16 +191,16 @@ class PokerBot:
             hole_cards = ", ".join([f"{card.rank}{card.suit}" for card in player.hole_cards])
             self.send_private_message(player.telegram_id, player.name, f"Your hole cards are: {hole_cards}")
         # set game'c current player to the player after the dealer
-        self.game.current_player = self.game.players[
-            (self.game.players.index(self.game.dealer) + 1) % len(self.game.players)]
+        self.game.current_player = self.game.players[0]
 
-        self.inform_players()
+        self.next_round()
+        self.inform_joiner()
 
         # Print the current hand, deck, and game state to the console for debugging
-        print("Current Hand:",
-              [f"{card.rank}{card.suit}" for player in self.game.players for card in player.hole_cards])
-        print("Current Deck:", [f"{card.rank}{card.suit}" for card in self.game.deck.cards])
-        print("Current Game State:", self.game.to_dict())
+        # print("Current Hand:",
+        #       [f"{card.rank}{card.suit}" for player in self.game.players for card in player.hole_cards])
+        # print("Current Deck:", [f"{card.rank}{card.suit}" for card in self.game.deck.cards])
+        # print("Current Game State:", self.game.to_dict())
 
     def run(self):
         self.updater.start_polling()
@@ -210,32 +223,36 @@ class PokerBot:
             self.send_message(f"An error occurred: {str(e)}")
 
     def raise_bet(self, update: Update, context: CallbackContext):
-        try:
-            user = update.message.from_user
-            if not self.game or self.game.current_player.name != user.username:
-                update.message.reply_text('It\'s not your turn.')
-                return
+        # try:
+        user = update.message.from_user
+        if not self.game or self.game.current_player.name != user.username:
+            update.message.reply_text('It\'s not your turn.')
+            return
 
-            # Extract the multiplier from the command name
-            command = update.message.text.split('@')[0][1:]
-            if command == 'raise':
-                amount = int(context.args[0]) if context.args else (self.game.current_bet + self.game.small_blind)
-            else:
-                multiplier = int(command.split('_')[1].replace('x', ''))
-                amount = self.game.current_bet * multiplier
+        # Extract the multiplier from the command name
+        print(update.message.text)
+        command = update.message.text.split('/')[1]
+        if command == 'raise':
+            amount = int(context.args[0]) if context.args else (self.game.current_bet + self.game.small_blind)
+        else:
+            print(command, command.split('_'))
 
-            # Implement raise logic
-            self.game.handle_raise(self.game.current_player, amount)
-            # set has_called for all other players to False and for this player to True
-            for player in self.game.players:
-                player.has_called = False
-            self.game.current_player.has_called = True
-            update.message.reply_text(f'{user.first_name} raises by {amount} PVP tokens.')
-            GameState.save_state(self.game)
-            self.next_player()
+            multiplier = int(command.split('_')[1].replace('x', '').split('@')[0]) - 1
+            amount = self.game.current_bet * multiplier
 
-        except Exception as e:
-            self.send_message(f"An error occurred: {str(e)}")
+        print(f'player : {self.game.current_player.name} amount : {amount}')
+        # Implement raise logic
+        self.game.handle_raise(self.game.current_player, amount)
+        # set has_called for all other players to False and for this player to True
+        for player in self.game.players:
+            player.has_called = False
+        self.game.current_player.has_called = True
+        update.message.reply_text(f'{user.first_name} raises by {amount} PVP tokens.')
+        GameState.save_state(self.game)
+        self.next_player()
+
+        # except Exception as e:
+        #     self.send_message(f"An error occurred: {str(e)}")
 
     def fold(self, update: Update, context: CallbackContext):
         try:
@@ -265,7 +282,9 @@ class PokerBot:
             self.game.current_player.has_called = True
             update.message.reply_text(f'{user.first_name} checks.')
             GameState.save_state(self.game)
-            self.next_player()
+            self.game.current_player = self.game.players[
+                (self.game.players.index(self.game.current_player) + 1) % len(self.game.players)]
+            self.inform_starter()
         except Exception as e:
             self.send_message(f"An error occurred: {str(e)}")
 
@@ -304,6 +323,42 @@ class PokerBot:
         except Exception as e:
             self.send_message(f"An error occurred: {str(e)}")
 
+    def next_round(self):
+        print('next round')
+        # check if everybody has called or folded
+        if self.game.current_player == self.game.dealer:
+            print('check if current player is dealer')
+            # If all players have either called or folded, move to the next round
+            if all(player.has_called or player.has_folded for player in self.game.players):
+                print('All players have called or folded')
+                self.game.next_round()
+                # send the new cards to the players
+                if self.game.current_round == 'Turn & River':
+                    self.send_message(f" The game has ended. The winner is {self.game.winner.name}")
+                    self.game = PokerGame()
+                    return
+                else:
+                    self.send_message(
+                        f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
+                    # reset the players' has_called and has_folded attributes
+                    for player in self.game.players:
+                        player.has_called = False
+                        player.has_folded = False
+
+                # Automatically advance to the next round after the turn and river are revealed
+                if self.game.current_round in ['Turn & River']:
+                    self.next_round()
+        # Move to the next player
+        self.game.current_player = self.game.players[
+            (self.game.players.index(self.game.current_player) + 1) % len(self.game.players)]
+
+        # self.inform_players()
+
+    # Add a method to determine the winner
+    def determine_winner(self):
+        # This is a placeholder. You'll need to implement the actual logic to determine the winner.
+        return self.game.players[0]
+
     def next_player(self):
         # check if everybody has called or folded
         if self.game.current_player == self.game.dealer:
@@ -312,6 +367,8 @@ class PokerBot:
                 self.game.next_round()
                 # send the new cards to the players
                 if self.game.current_round == 'End':
+                    self.send_message(
+                        f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
                     self.send_message(f" The game has ended. The winner is {self.game.winner.name}")
                     self.game = PokerGame()
                     return

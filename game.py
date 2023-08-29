@@ -48,9 +48,9 @@ class Deck:
 
 
 class Player:
-    def __init__(self, telegram_id: str, name: str):
+    def __init__(self, telegram_id: str, name: str, chips: int = 500):
         self.telegram_id = telegram_id
-        self.chips = 100  # Starting chips
+        self.chips = chips  # Starting chips
         self.hole_cards: List[Card] = []
         self.current_bet = 0
         self.name = name
@@ -97,6 +97,7 @@ import random
 # Update the PokerGame class to include the deck and the dealing logic
 class PokerGame:
     def __init__(self):
+        self.starting_chips: int = 0  # Starting chips for each player
         self.players: List[Player] = []  # List of players in the game
         self.starting_state: List[Player] = []  # List of players in the game
         self.deck = Deck()
@@ -134,6 +135,20 @@ class PokerGame:
             # todo: reset to starting state
             pass
 
+    def handle_blinds(self):
+        # specifically casino poker rules
+        self.players[0].has_called = True
+        self.players[1].has_called = True
+        # Handle blind logic
+        self.players[0].chips -= self.small_blind
+        self.players[1].chips -= 2 * self.small_blind
+        self.players[0].current_bet = self.small_blind
+        self.players[1].current_bet = 2 * self.small_blind
+        self.pot += 3 * self.small_blind
+        self.last_action = 'Blinds'
+        self.current_bet = 2 * self.small_blind
+        pass
+
     def handle_bet(self, player: Player, amount: int):
         if amount > player.chips:
             raise ValueError('Not enough chips to bet.')
@@ -143,7 +158,7 @@ class PokerGame:
         self.last_action = 'Bet'
 
     def handle_raise(self, player: Player, amount: int):
-        if amount < 2 * self.current_bet or amount > player.chips:
+        if amount < self.current_bet or amount > player.chips:
             raise ValueError('Invalid raise amount.')
         player.bet(amount)
         self.pot += amount
@@ -180,8 +195,14 @@ class PokerGame:
             self.community_cards.extend(self.deck.deal(3))
             self.current_round = 'Flop'
         elif self.current_round == 'Flop':
-            self.community_cards.extend(self.deck.deal(1))
-            self.current_round = 'Turn'
+            self.community_cards.extend(self.deck.deal(2))
+            self.winner = self.end_game()
+            self.current_round = 'End'
+            # self.current_round = 'Turn & River'
+        elif self.current_round == 'Turn & River':
+            self.community_cards.extend(self.deck.deal(2))
+            self.winner = self.end_game()
+            self.current_round = 'End'
         elif self.current_round == 'Turn':
             self.community_cards.extend(self.deck.deal(1))
             self.current_round = 'River'
@@ -270,6 +291,8 @@ class PokerGame:
                 self.pot = 0
                 self.last_action = 'End'
                 return None
+
+
 
 
 class HandEvaluator:
