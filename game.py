@@ -235,7 +235,11 @@ class PokerGame:
 
             # If key cards are the same, compare remaining cards
             remaining_cards1 = sorted(self.players[0].hole_cards + self.community_cards, key=lambda x: Card.RANKS.index(x.rank), reverse=True)
+
             remaining_cards2 = sorted(self.players[1].hole_cards + self.community_cards, key=lambda x: Card.RANKS.index(x.rank), reverse=True)
+
+            print(remaining_cards1)
+            print(remaining_cards2)
             for card1, card2 in zip(remaining_cards1, remaining_cards2):
                 if Card.RANKS.index(card1.rank) > Card.RANKS.index(card2.rank):
                     return self.players[0]
@@ -387,26 +391,30 @@ class HandEvaluator:
 
 def test_poker_game_logic():
     # Test HandEvaluator methods
-    assert HandEvaluator.is_flush([Card('A', '♠'), Card('K', '♠'), Card('Q', '♠'), Card('J', '♠'), Card('10', '♠')]) == True
-    assert HandEvaluator.is_straight([Card('A', '♠'), Card('K', '♠'), Card('Q', '♠'), Card('J', '♠'), Card('10', '♠')]) == True
-    assert HandEvaluator.is_four_of_a_kind([Card('A', '♠'), Card('A', '♣'), Card('A', '♦'), Card('A', '♥'), Card('10', '♠')]) == True
-    assert HandEvaluator.is_full_house([Card('A', '♠'), Card('A', '♣'), Card('A', '♦'), Card('10', '♥'), Card('10', '♠')]) == True
-    assert HandEvaluator.is_three_of_a_kind([Card('A', '♠'), Card('A', '♣'), Card('A', '♦'), Card('J', '♥'), Card('10', '♠')]) == True
-    assert HandEvaluator.is_two_pair([Card('A', '♠'), Card('A', '♣'), Card('J', '♦'), Card('J', '♥'), Card('10', '♠')]) == True
-    assert HandEvaluator.is_one_pair([Card('A', '♠'), Card('A', '♣'), Card('Q', '♦'), Card('J', '♥'), Card('10', '♠')]) == True
+    assert HandEvaluator.is_flush([Card('A', '♠️'), Card('K', '♠️'), Card('Q', '♠️'), Card('J', '♠️'), Card('10', '♠️')]) == True
+    assert HandEvaluator.is_straight([Card('A', '♠️'), Card('K', '♠️'), Card('Q', '♠️'), Card('J', '♠️'), Card('10', '♠️')]) == True
+    assert HandEvaluator.is_four_of_a_kind([Card('A', '♠️'), Card('A', '♣️'), Card('A', '♦️'), Card('A', '♥️'), Card('10', '♠️')]) == True
+    assert HandEvaluator.is_full_house([Card('A', '♠️'), Card('A', '♣️'), Card('A', '♦️'), Card('10', '♥️'), Card('10', '♠️')]) == True
+    assert HandEvaluator.is_three_of_a_kind([Card('A', '♠️'), Card('A', '♣️'), Card('A', '♦️'), Card('J', '♥️'), Card('10', '♠️')]) == True
+    assert HandEvaluator.is_two_pair([Card('A', '♠️'), Card('A', '♣️'), Card('J', '♦️'), Card('J', '♥️'), Card('10', '♠️')]) == True
+    assert HandEvaluator.is_one_pair([Card('A', '♠️'), Card('A', '♣️'), Card('Q', '♦️'), Card('J', '♥️'), Card('10', '♠️')]) == True
 
     # Test PokerGame winner evaluation
     game = PokerGame()
-    game.player1_cards = [Card('A', '♠'), Card('K', '♠'), Card('Q', '♠'), Card('J', '♠'), Card('10', '♠')]
-    game.player2_cards = [Card('A', '♣'), Card('K', '♣'), Card('Q', '♣'), Card('J', '♣'), Card('9', '♣')]
+    # todo: create two fake players here
+
+
+    game.player1_cards = [Card('A', '♠️'), Card('K', '♠️'), Card('Q', '♠️'), Card('J', '♠️'), Card('10', '♠️')]
+    game.player2_cards = [Card('A', '♣️'), Card('K', '♣️'), Card('Q', '♣️'), Card('J', '♣️'), Card('9', '♣️')]
     assert game.evaluate_winner() == 'Player 1'
 
-    game.player1_cards = [Card('A', '♠'), Card('A', '♣'), Card('A', '♦'), Card('A', '♥'), Card('10', '♠')]
-    game.player2_cards = [Card('A', '♣'), Card('A', '♠'), Card('A', '♦'), Card('10', '♥'), Card('10', '♠')]
+    game.player1_cards = [Card('A', '♠️'), Card('A', '♣️'), Card('A', '♦️'), Card('A', '♥️'), Card('10', '♠️')]
+    game.player2_cards = [Card('A', '♣️'), Card('A', '♠️'), Card('A', '♦️'), Card('10', '♥️'), Card('10', '♠️')]
     assert game.evaluate_winner() == 'Player 1'
 
-    game.player1_cards = [Card('A', '♠'), Card('A', '♣'), Card('J', '♦'), Card('J', '♥'), Card('10', '♠')]
-    game.player2_cards = [Card('A', '♣'), Card('A', '♠'), Card('J', '♦'), Card('J', '♥'), Card('10', '♠')]
+    game.player1_cards = [Card('A', '♠️'), Card('A', '♣️'), Card('J', '♦️'), Card('J', '♥️'), Card('10', '♠️')]
+    game.player2_cards = [Card('A', '♣️'), Card('A', '♠️'), Card('J', '♦️'), Card('J', '♥️'), Card('10', '♠️')]
     assert game.evaluate_winner() == 'Tie'
 
     print('All tests passed!')
+
