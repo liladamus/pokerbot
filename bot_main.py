@@ -248,12 +248,14 @@ class PokerBot:
 
         self.log_game_state()
         # Send private hole cards to each player
-        for player in self.game.players:
+        for index, player in enumerate(self.game.players):
             hole_cards = ", ".join([f"{card.rank}{card.suit}" for card in player.hole_cards])
-            image_addr = generate_card_image_public(player.hole_cards, f'{player.name}_cards.png')
+            image_addr = generate_card_image_public(player.hole_cards, f'{"player1" if index == 0 else "player2" if index == 1 else player.name}_cards.png')
             # send image to player
             self.send_private_image(int(player.telegram_id), player.name, image_addr)
-            self.send_private_message(int(player.telegram_id), player.name, f"Your hole cards are: {hole_cards}")
+            # use get_rank_string here:
+
+            self.send_private_message(int(player.telegram_id), player.name, f"Your hole cards are: {repr(hole_cards)}")
         # set game'c current player to the player after the dealer
         self.game.current_player = self.game.players[0]
 
@@ -383,7 +385,7 @@ class PokerBot:
 
             # Implement show cards logic
             cards = self.game.handle_show()
-            update.message.reply_text(f'{user.first_name} shows {cards[0]} and {cards[1]}.')
+            update.message.reply_text(f'{user.first_name} shows {repr(cards[0])} and {repr(cards[1])}.')
             GameState.save_state(self.game)
         except Exception as e:
             update.message.reply_text(f"An error occurred: {str(e)}")
@@ -400,12 +402,12 @@ class PokerBot:
                 # send the new cards to the players
                 if self.game.current_round == 'Turn & River':
                     update.message.reply_text(
-                        f" The game has ended. The winner is {self.game.winner.name} with {self.game.winner.hand}")
+                        f" The game has ended. The winner is {self.game.winner.name} with {repr(self.game.winner.hand)}")
                     self.game = PokerGame()
                     return
                 if self.game.current_round == 'End':
                     update.message.reply_text(
-                        f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
+                        f" Round is {self.game.current_round}. The new cards are: {repr(self.game.community_cards)}")
                     image_addr = generate_card_image_public(self.game.community_cards, f'comm_cards.png')
                     self.send_public_image(image_addr)
                     if self.game.winner:
@@ -439,7 +441,7 @@ class PokerBot:
                     return
                 else:
                     update.message.reply_text(
-                        f" Round is {self.game.current_round}. The new cards are: {self.game.community_cards}")
+                        f" Round is {self.game.current_round}. The new cards are: {repr(self.game.community_cards)}")
                     image_addr = generate_card_image_public(self.game.community_cards, f'comm_cards.png')
                     self.send_public_image(image_addr)
                     # reset the players' has_called and has_folded attributes

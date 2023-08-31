@@ -27,13 +27,13 @@ def card_notation_to_file(card: Card):
     value = card.rank
     suit = card.suit
 
-    if value == "A":
+    if value == "14":
         value = "ace"
-    elif value == "K":
+    elif value == "13":
         value = "king"
-    elif value == "Q":
+    elif value == "12":
         value = "queen"
-    elif value == "J":
+    elif value == "11":
         value = "jack"
 
     if suit == '♠️':

@@ -20,7 +20,7 @@ class PokerHand(Enum):
 
 
 class Card:
-    RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']  # Assign numerical values to face cards
     SUITS = ['♠️', '♣️', '♦️', '♥️']
 
     def __init__(self, rank: str, suit: str):
@@ -28,8 +28,9 @@ class Card:
         self.suit = suit
 
     def __repr__(self):
-        return f'{self.rank}{self.suit}'
-
+        FACE_CARDS = { '11': 'J', '12': 'Q', '13': 'K', '14': 'A' }
+        rank = FACE_CARDS.get(self.rank, self.rank)
+        return f'{rank}{self.suit}'
 
     def to_dict(self):
         return {
@@ -300,11 +301,13 @@ class PokerGame:
                 return None, None
 
 
+from itertools import combinations
 
 
 class HandEvaluator:
     @staticmethod
     def evaluate_hand(cards: List[Card]) -> Tuple[PokerHand, List[str]]:
+        assert all(isinstance(card, Card) for card in cards), "All elements in 'cards' must be of type 'Card'"
         # This method will evaluate the hand and return a tuple of the hand rank and the key cards
         if HandEvaluator.is_royal_flush(cards):
             return (PokerHand.ROYAL_FLUSH, [])
@@ -329,22 +332,33 @@ class HandEvaluator:
 
 
     @staticmethod
-    def is_royal_flush(cards: List[Card]) -> bool:
-        # Check if the cards form a royal flush
-        values = [card.rank for card in cards]
+    def is_flush(cards: List[Card]) -> bool:
         suits = [card.suit for card in cards]
-        return set(values) == {'10', 'J', 'Q', 'K', 'A'} and len(set(suits)) == 1
+        return any(suits.count(suit) >= 5 for suit in set(suits))
+
+    @staticmethod
+    def is_straight(cards: List[Card]) -> bool:
+        values = sorted([Card.RANKS.index(card.rank) for card in cards])
+        if 14 in values:
+            values.append(1)
+        for i in range(len(values) - 4):
+            if all(values[i + j] - values[i] == j for j in range(5)):
+                return True
+        return False
+
+    @staticmethod
+    def is_royal_flush(cards: List[Card]) -> bool:
+        for combination in combinations(cards, 5):
+            values = [int(card.rank) for card in combination]
+            suits = [card.suit for card in combination]
+            if set(values) == {10, 11, 12, 13, 14} and len(set(suits)) == 1:
+                return True
+        return False
+
 
     @staticmethod
     def is_straight_flush(cards: List[Card]) -> bool:
-        # Check if the cards form a straight flush
-        if len(set(card.suit for card in cards)) == 1:
-            values = sorted(cards, key=lambda card: Card.RANKS.index(card.rank))
-            for i in range(len(values) - 1):
-                if Card.RANKS.index(values[i + 1].rank) - Card.RANKS.index(values[i].rank) != 1:
-                    return False
-            return True
-        return False
+        return HandEvaluator.is_flush(cards) and HandEvaluator.is_straight(cards)
 
 
     @staticmethod
@@ -359,19 +373,6 @@ class HandEvaluator:
         unique_values = set(values)
         return any(values.count(value) == 3 for value in unique_values) and any(
             values.count(value) == 2 for value in unique_values)
-
-    @staticmethod
-    def is_flush(cards: List[Card]) -> bool:
-        suits = [card.suit for card in cards]
-        return len(set(suits)) == 1
-
-    @staticmethod
-    def is_straight(cards: List[Card]) -> bool:
-        values = sorted(cards, key=lambda card: Card.RANKS.index(card.rank))
-        for i in range(len(values) - 1):
-            if Card.RANKS.index(values[i + 1].rank) - Card.RANKS.index(values[i].rank) != 1:
-                return False
-        return True
 
     @staticmethod
     def is_three_of_a_kind(cards: List[Card]) -> bool:
