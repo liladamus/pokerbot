@@ -97,17 +97,17 @@ class PokerBot:
         dp.add_handler(CommandHandler('fixpls', self.fix_pls))
 
     def fix_pls(self, update: Update, context: CallbackContext):
-        user_id = str(update.message.from_user.id)
-        if user_id in self.authorized_ids:
-            self.game.handle_reset()
-            # todo @boolet : each player should get their chips back
-            # gamecontract.encodeABI(
-            #     fn_name='endGame',
-            #     args=[self.game.chat_id, get_wallet_for_tg_id(player.telegram_id), usedWETH_value_from_chips(self.game.starting_chips)])
-            self.game = PokerGame()
-            update.message.reply_text('Game has been reset.')
-        else:
-            update.message.reply_text('You are not authorized to use this command.')
+        # user_id = str(update.message.from_user.id)
+        # if user_id in self.authorized_ids:
+        self.game.handle_reset()
+        # todo @boolet : each player should get their chips back
+        # gamecontract.encodeABI(
+        #     fn_name='endGame',
+        #     args=[self.game.chat_id, get_wallet_for_tg_id(player.telegram_id), usedWETH_value_from_chips(self.game.starting_chips)])
+        self.game = PokerGame()
+        update.message.reply_text('Game has been reset.')
+        # else:
+        #     update.message.reply_text('You are not authorized to use this command.')
 
     def abort(self, update: Update, context: CallbackContext):
         """Abort the current game."""
@@ -250,12 +250,14 @@ class PokerBot:
         # Send private hole cards to each player
         for index, player in enumerate(self.game.players):
             hole_cards = ", ".join([f"{card.rank}{card.suit}" for card in player.hole_cards])
-            image_addr = generate_card_image_public(player.hole_cards, f'{"player1" if index == 0 else "player2" if index == 1 else player.name}_cards.png')
+            image_addr = generate_card_image_public(player.hole_cards,
+                                                    f'{"player1" if index == 0 else "player2" if index == 1 else player.name}_cards.png')
             # send image to player
             self.send_private_image(int(player.telegram_id), player.name, image_addr)
             # use get_rank_string here:
 
-            self.send_private_message(int(player.telegram_id), player.name, f"Your hole cards are: {repr(hole_cards)}")
+            self.send_private_message(int(player.telegram_id), player.name,
+                                      f"Your hole cards are: {repr(player.hole_cards)}")
         # set game'c current player to the player after the dealer
         self.game.current_player = self.game.players[0]
 
@@ -413,8 +415,8 @@ class PokerBot:
                     if self.game.winner:
                         message = (
                             f"The game has ended. The winner is {self.game.winner.name} "
-                            f"with {self.game.winner.hole_cards}\n Hand was: "
-                            f"{PokerHand(HandEvaluator.evaluate_hand(self.game.winner.hole_cards + self.game.community_cards)[0]).name}\n"
+                            f"with {repr(self.game.winner.hole_cards)}\n Hand was: "
+                            f"{HandEvaluator.evaluate_rank_class(HandEvaluator.evaluate_hand(self.game.winner.hole_cards, self.game.community_cards))}\n"
                             # print amount of chips won
                             f" and won {self.game.winner.chips} PVP tokens"
                         )

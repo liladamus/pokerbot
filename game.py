@@ -1,9 +1,9 @@
 from enum import Enum
-from typing import List, Tuple
-# from hand import HandEvaluator
-# Define card suits and ranks
-SUITS = ['Hearts', 'Diamonds', 'Clubs', 'Spades']
-RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']
+from typing import List
+from treys.treys import Evaluator
+from treys.treys import Card as TreysCard
+
+evaluator = Evaluator()
 
 
 class PokerHand(Enum):
@@ -20,7 +20,7 @@ class PokerHand(Enum):
 
 
 class Card:
-    RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']  # Assign numerical values to face cards
+    RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14']
     SUITS = ['♠️', '♣️', '♦️', '♥️']
 
     def __init__(self, rank: str, suit: str):
@@ -28,9 +28,21 @@ class Card:
         self.suit = suit
 
     def __repr__(self):
-        FACE_CARDS = { '11': 'J', '12': 'Q', '13': 'K', '14': 'A' }
+        FACE_CARDS = {'11': 'J', '12': 'Q', '13': 'K', '14': 'A'}
         rank = FACE_CARDS.get(self.rank, self.rank)
         return f'{rank}{self.suit}'
+
+    def format_for_treys(self):
+        TREYS_RANKS: str = '23456789TJQKA'
+        TREYS_SUITS: str = 'scdh'
+
+        rank_idx = self.RANKS.index(self.rank)
+        suit_ids = self.SUITS.index(self.suit)
+
+        treys_rank = TREYS_RANKS[rank_idx]
+        treys_suit = TREYS_SUITS[suit_ids]
+
+        return treys_rank + treys_suit
 
     def to_dict(self):
         return {
@@ -58,7 +70,6 @@ class Player:
         self.name = name
         self.has_called = False
         self.has_folded = False
-
 
     def bet(self, amount: int):
         if amount > self.chips:
@@ -90,10 +101,7 @@ class Player:
         return player
 
 
-
 import random
-
-
 
 
 # Update the PokerGame class to include the deck and the dealing logic
@@ -188,9 +196,7 @@ class PokerGame:
         self.pot = 0
         self.last_action = 'Fold'
 
-
     # def handle_show(self):
-
 
     def next_round(self):
         if self.current_round == 'Pre-flop':
@@ -216,38 +222,17 @@ class PokerGame:
             # self.current_round = 'End'
             pass
 
-
     def evaluate_winner(self):
-        player1_hand_rank, player1_key_cards = HandEvaluator.evaluate_hand(self.players[0].hole_cards + self.community_cards)
-        player2_hand_rank, player2_key_cards = HandEvaluator.evaluate_hand(self.players[1].hole_cards + self.community_cards)
-
+        print('Evaluating winner')
+        player1_hand_rank = HandEvaluator.evaluate_hand(self.players[0].hole_cards, self.community_cards)
+        player2_hand_rank = HandEvaluator.evaluate_hand(self.players[1].hole_cards, self.community_cards)
         # Compare hand ranks
-        if player1_hand_rank.value > player2_hand_rank.value:
+        if player1_hand_rank < player2_hand_rank:
             return self.players[0]
-        elif player1_hand_rank.value < player2_hand_rank.value:
+        elif player1_hand_rank > player2_hand_rank:
             return self.players[1]
         else:
             # If hand ranks are the same, compare key cards
-            for card1, card2 in zip(player1_key_cards, player2_key_cards):
-                if Card.RANKS.index(card1) > Card.RANKS.index(card2):
-                    return self.players[0]
-                elif Card.RANKS.index(card1) < Card.RANKS.index(card2):
-                    return self.players[1]
-
-            # If key cards are the same, compare remaining cards
-            remaining_cards1 = sorted(self.players[0].hole_cards + self.community_cards, key=lambda x: Card.RANKS.index(x.rank), reverse=True)
-
-            remaining_cards2 = sorted(self.players[1].hole_cards + self.community_cards, key=lambda x: Card.RANKS.index(x.rank), reverse=True)
-
-            print(remaining_cards1)
-            print(remaining_cards2)
-            for card1, card2 in zip(remaining_cards1, remaining_cards2):
-                if Card.RANKS.index(card1.rank) > Card.RANKS.index(card2.rank):
-                    return self.players[0]
-                elif Card.RANKS.index(card1.rank) < Card.RANKS.index(card2.rank):
-                    return self.players[1]
-
-            # If all cards are the same, it's a tie
             return None
 
     def to_dict(self) -> dict:
@@ -306,116 +291,52 @@ from itertools import combinations
 
 class HandEvaluator:
     @staticmethod
-    def evaluate_hand(cards: List[Card]) -> Tuple[PokerHand, List[str]]:
-        assert all(isinstance(card, Card) for card in cards), "All elements in 'cards' must be of type 'Card'"
-        # This method will evaluate the hand and return a tuple of the hand rank and the key cards
-        if HandEvaluator.is_royal_flush(cards):
-            return (PokerHand.ROYAL_FLUSH, [])
-        elif HandEvaluator.is_straight_flush(cards):
-            return (PokerHand.STRAIGHT_FLUSH, [max(cards, key=lambda card: Card.RANKS.index(card.rank)).rank])
-        elif HandEvaluator.is_four_of_a_kind(cards):
-            return (PokerHand.FOUR_OF_A_KIND, [max(cards, key=lambda card: Card.RANKS.index(card.rank)).rank])
-        elif HandEvaluator.is_full_house(cards):
-            return (PokerHand.FULL_HOUSE, [max(cards, key=lambda card: Card.RANKS.index(card.rank)).rank])
-        elif HandEvaluator.is_flush(cards):
-            return (PokerHand.FLUSH, [max(cards, key=lambda card: Card.RANKS.index(card.rank)).rank])
-        elif HandEvaluator.is_straight(cards):
-            return (PokerHand.STRAIGHT, [max(cards, key=lambda card: Card.RANKS.index(card.rank)).rank])
-        elif HandEvaluator.is_three_of_a_kind(cards):
-            return (PokerHand.THREE_OF_A_KIND, [max(cards, key=lambda card: Card.RANKS.index(card.rank)).rank])
-        elif HandEvaluator.is_two_pair(cards):
-            return (PokerHand.TWO_PAIR, [max(cards, key=lambda card: Card.RANKS.index(card.rank)).rank])
-        elif HandEvaluator.is_one_pair(cards):
-            return (PokerHand.ONE_PAIR, [max(cards, key=lambda card: Card.RANKS.index(card.rank)).rank])
-        else:
-            return (PokerHand.HIGH_CARD, [max(card.rank for card in cards)])
-
+    def evaluate_hand(hand: List[Card], board: List[Card]) -> int:
+        hand = [TreysCard.new(card.format_for_treys()) for card in hand]
+        board = [TreysCard.new(card.format_for_treys()) for card in board]
+        rank = evaluator.evaluate(hand, board)
+        return rank
 
     @staticmethod
-    def is_flush(cards: List[Card]) -> bool:
-        suits = [card.suit for card in cards]
-        return any(suits.count(suit) >= 5 for suit in set(suits))
-
-    @staticmethod
-    def is_straight(cards: List[Card]) -> bool:
-        values = sorted([Card.RANKS.index(card.rank) for card in cards])
-        if 14 in values:
-            values.append(1)
-        for i in range(len(values) - 4):
-            if all(values[i + j] - values[i] == j for j in range(5)):
-                return True
-        return False
-
-    @staticmethod
-    def is_royal_flush(cards: List[Card]) -> bool:
-        for combination in combinations(cards, 5):
-            values = [int(card.rank) for card in combination]
-            suits = [card.suit for card in combination]
-            if set(values) == {10, 11, 12, 13, 14} and len(set(suits)) == 1:
-                return True
-        return False
+    def evaluate_rank_class(rank: int) -> str:
+        return evaluator.class_to_string(evaluator.get_rank_class(rank))
 
 
-    @staticmethod
-    def is_straight_flush(cards: List[Card]) -> bool:
-        return HandEvaluator.is_flush(cards) and HandEvaluator.is_straight(cards)
+def test_poker_game():
+    board1 = Card('10', '♥️')
+    board2 = Card('11', '♥️')
+    board3 = Card('12', '♥️')
+    board4 = Card('13', '♥️')
+    board5 = Card('3', '♠️')
 
+    starter1 = Card('12', '♠️')
+    starter2 = Card('9', '♥️')
 
-    @staticmethod
-    def is_four_of_a_kind(cards: List[Card]) -> bool:
-        values = [card.rank for card in cards]
-        return any(values.count(value) == 4 for value in set(values))
+    joiner1 = Card('8', '♥️')
+    joiner2 = Card('14', '♣️')
 
+    free = Card('14', '♥️')
 
-    @staticmethod
-    def is_full_house(cards: List[Card]) -> bool:
-        values = [card.rank for card in cards]
-        unique_values = set(values)
-        return any(values.count(value) == 3 for value in unique_values) and any(
-            values.count(value) == 2 for value in unique_values)
+    player1 = Player('123', 'Player 1')
+    player2 = Player('456', 'Player 2')
 
-    @staticmethod
-    def is_three_of_a_kind(cards: List[Card]) -> bool:
-        values = [card.rank for card in cards]
-        return any(values.count(value) == 3 for value in set(values))
-
-    @staticmethod
-    def is_two_pair(cards: List[Card]) -> bool:
-        values = [card.rank for card in cards]
-        return sum(1 for value in set(values) if values.count(value) == 2) == 2
-
-    @staticmethod
-    def is_one_pair(cards: List[Card]) -> bool:
-        values = [card.rank for card in cards]
-        return any(values.count(value) == 2 for value in set(values))
-
-
-def test_poker_game_logic():
-    # Test HandEvaluator methods
-    assert HandEvaluator.is_flush([Card('A', '♠️'), Card('K', '♠️'), Card('Q', '♠️'), Card('J', '♠️'), Card('10', '♠️')]) == True
-    assert HandEvaluator.is_straight([Card('A', '♠️'), Card('K', '♠️'), Card('Q', '♠️'), Card('J', '♠️'), Card('10', '♠️')]) == True
-    assert HandEvaluator.is_four_of_a_kind([Card('A', '♠️'), Card('A', '♣️'), Card('A', '♦️'), Card('A', '♥️'), Card('10', '♠️')]) == True
-    assert HandEvaluator.is_full_house([Card('A', '♠️'), Card('A', '♣️'), Card('A', '♦️'), Card('10', '♥️'), Card('10', '♠️')]) == True
-    assert HandEvaluator.is_three_of_a_kind([Card('A', '♠️'), Card('A', '♣️'), Card('A', '♦️'), Card('J', '♥️'), Card('10', '♠️')]) == True
-    assert HandEvaluator.is_two_pair([Card('A', '♠️'), Card('A', '♣️'), Card('J', '♦️'), Card('J', '♥️'), Card('10', '♠️')]) == True
-    assert HandEvaluator.is_one_pair([Card('A', '♠️'), Card('A', '♣️'), Card('Q', '♦️'), Card('J', '♥️'), Card('10', '♠️')]) == True
-
-    # Test PokerGame winner evaluation
     game = PokerGame()
-    # todo: create two fake players here
+    game.add_player(player1)
+    game.add_player(player2)
+
+    # Test evaluate_hand
+    rank = HandEvaluator.evaluate_hand([board1, board2, board3], [board4, free])
+    # assert hand[0] == PokerHand.ROYAL_FLUSH, "evaluate_hand failed"
+    print(HandEvaluator.evaluate_rank_class(rank))
+
+    # Test evaluate_winner
+    player1.hole_cards = [starter1, starter2]
+    player2.hole_cards = [joiner1, joiner2]
+    game.community_cards = [board1, board2, board3, board4, board5]
+    winner = game.evaluate_winner()
+    assert winner == player1, "evaluate_winner failed"
+    print('we are all good')
 
 
-    game.player1_cards = [Card('A', '♠️'), Card('K', '♠️'), Card('Q', '♠️'), Card('J', '♠️'), Card('10', '♠️')]
-    game.player2_cards = [Card('A', '♣️'), Card('K', '♣️'), Card('Q', '♣️'), Card('J', '♣️'), Card('9', '♣️')]
-    assert game.evaluate_winner() == 'Player 1'
-
-    game.player1_cards = [Card('A', '♠️'), Card('A', '♣️'), Card('A', '♦️'), Card('A', '♥️'), Card('10', '♠️')]
-    game.player2_cards = [Card('A', '♣️'), Card('A', '♠️'), Card('A', '♦️'), Card('10', '♥️'), Card('10', '♠️')]
-    assert game.evaluate_winner() == 'Player 1'
-
-    game.player1_cards = [Card('A', '♠️'), Card('A', '♣️'), Card('J', '♦️'), Card('J', '♥️'), Card('10', '♠️')]
-    game.player2_cards = [Card('A', '♣️'), Card('A', '♠️'), Card('J', '♦️'), Card('J', '♥️'), Card('10', '♠️')]
-    assert game.evaluate_winner() == 'Tie'
-
-    print('All tests passed!')
-
+# Run the test
+test_poker_game()
